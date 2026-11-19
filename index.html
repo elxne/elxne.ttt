@@ -55,7 +55,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .done .big{font-family:"Cormorant Garamond",serif;font-size:34px;margin:0 0 6px;color:var(--ok)}
 .foot{text-align:center;color:var(--muted);font-size:12.5px;margin-top:26px}
 .hidden{display:none !important}
-a.btn{font-weight:600;border-radius:10px;padding:12px 18px;border:1px solid var(--ink);background:var(--ink);color:#fff;text-decoration:none;display:inline-block}
+button.btnDark,a.btn{font-weight:600;border-radius:10px;padding:12px 18px;border:1px solid var(--ink);background:var(--ink);color:#fff;text-decoration:none;display:inline-block}
 input[readonly],textarea[readonly]{background:#f3eee6;color:var(--ink);border-color:transparent}
 .lockedNote{font-size:13px;color:var(--muted);margin:0 0 12px}
 @media (max-width:600px){.grid{grid-template-columns:1fr}.brand{font-size:38px}.card{padding:18px}}
@@ -104,10 +104,11 @@ input[readonly],textarea[readonly]{background:#f3eee6;color:var(--ink);border-co
         <input type="text" id="aLink" readonly onclick="this.select()">
       </label>
       <div class="row">
-        <a class="btn" id="mailBtn" href="#">✉️ Envoyer par e-mail</a>
+        <button type="button" class="btnDark" id="mailBtn">✉️ Envoyer au client par e-mail</button>
         <button type="button" id="shareBtn">📲 Partager (WhatsApp, Insta…)</button>
         <button type="button" id="copyBtn">Copier le lien</button>
       </div>
+      <p style="margin:10px 0 0;font-size:14px;color:var(--ok)" id="mailStatus"></p>
       <p style="margin:12px 0 0;color:var(--muted);font-size:13px">Tu recevras le contrat signé (PDF) sur ton adresse dès que le client l'aura signé. Vérifie toujours les montants dans le PDF reçu.</p>
       <button type="button" id="newBtn" style="margin-top:14px">+ Nouveau contrat</button>
     </div>
@@ -198,41 +199,29 @@ input[readonly],textarea[readonly]{background:#f3eee6;color:var(--ink);border-co
   <p class="foot">elxne.ttt — Instagram @elxne.ttt</p>
 </div>
 
-<!-- Formulaire technique d'envoi par e-mail (invisible) -->
-<form id="mailForm" class="hidden" method="POST" enctype="multipart/form-data" target="mailFrame">
-  <input type="hidden" name="_subject" id="mSubject">
-  <input type="hidden" name="_cc" id="mCc">
-  <input type="hidden" name="_captcha" value="false">
-  <input type="hidden" name="_template" value="table">
-  <input type="hidden" name="Client" id="mClient">
-  <input type="hidden" name="Réf. client (prénom / Insta)" id="mRef">
-  <input type="hidden" name="Email client" id="mEmail">
-  <input type="hidden" name="Téléphone" id="mTel">
-  <input type="hidden" name="Rendez-vous" id="mRdv">
-  <input type="hidden" name="Prix total" id="mPrix">
-  <input type="hidden" name="Acompte" id="mAcompte">
-  <input type="hidden" name="Signé le" id="mDate">
-  <input type="file" name="attachment" id="mFile">
-</form>
-<iframe name="mailFrame" id="mailFrame" class="hidden" title="envoi"></iframe>
 
 <script>
 /* ====================================================================
    CONFIG — À REMPLIR PAR LA TATOUEUSE
    ==================================================================== */
 const CONFIG = {
-  // Adresse qui reçoit les contrats signés (via FormSubmit.co, gratuit)
-  emailTatoueuse: "elxne.ttt@gmail.com",
+  // Adresse du script Google (voir le guide d'installation) — se termine par /exec
+  scriptUrl: "COLLE-ICI-L-URL-DU-SCRIPT-GOOGLE",
   // Identité légale qui apparaît dans le contrat
-  nomLegal: "Eline Gourrier",
-  siret: "94249893200014",
-  adresseSalon: "64 Rue de Vesle, 51100 Reims",
+  nomLegal: "[Prénom Nom de la tatoueuse] EI",
+  siret: "[SIRET]",
+  adresseSalon: "[Adresse du salon]",
   instagram: "@elxne.ttt",
-  // Code pour accéder à l'espace tatoueuse (où l'on prépare les contrats)
-  codeAcces: "0412",
+  // (Le code d'accès n'est plus ici : il est caché dans le script Google)
 };
 
 const $ = id => document.getElementById(id);
+
+/* ---------- Échanges avec le script Google ---------- */
+async function api(payload){
+  const r = await fetch(CONFIG.scriptUrl, { method: "POST", body: JSON.stringify(payload) });
+  return r.json();
+}
 
 /* ---------- Encodage des infos du RDV dans le lien ---------- */
 function encodeRdv(o){
@@ -248,8 +237,9 @@ function decodeRdv(s){
   } catch(e){ return null; }
 }
 
-const rdvParam = new URLSearchParams(location.search).get("r");
-const RDV = rdvParam ? decodeRdv(rdvParam) : null;
+const params = new URLSearchParams(location.search);
+const rdvParam = params.get("r"), sigParam = params.get("s");
+const RDV = (rdvParam && sigParam) ? decodeRdv(rdvParam) : null;
 
 if (RDV) {
   /* ===== MODE CLIENT : contrat prérempli, champs du RDV verrouillés ===== */
@@ -269,18 +259,26 @@ if (RDV) {
   $("lockCard").classList.remove("hidden");
 }
 
-function unlock(){
-  if ($("pin").value === CONFIG.codeAcces) {
-    $("lockCard").classList.add("hidden");
-    $("artistPanel").classList.remove("hidden");
-    $("aProjet").focus();
-  } else { $("pinErr").textContent = "Code incorrect."; }
+/* ---------- Espace tatoueuse ---------- */
+let artistCode = "";
+async function unlock(){
+  $("pinErr").textContent = ""; $("pinBtn").disabled = true; $("pinBtn").textContent = "…";
+  try {
+    const res = await api({ action: "check", code: $("pin").value });
+    if (res.ok) {
+      artistCode = $("pin").value;
+      $("lockCard").classList.add("hidden");
+      $("artistPanel").classList.remove("hidden");
+      $("aProjet").focus();
+    } else $("pinErr").textContent = res.error === "bloque" ? "Trop d'essais. Réessaie dans 10 minutes." : "Code incorrect.";
+  } catch(e){ $("pinErr").textContent = "Impossible de joindre le script Google (vérifie scriptUrl dans CONFIG)."; }
+  $("pinBtn").disabled = false; $("pinBtn").textContent = "Entrer";
 }
 $("pinBtn").onclick = unlock;
 $("pin").addEventListener("keydown", e => { if (e.key === "Enter") unlock(); });
 
-let shareText = "";
-$("genBtn").onclick = () => {
+let current = null; // { d, link, text, subject }
+$("genBtn").onclick = async () => {
   const d = {
     projet: $("aProjet").value.trim(), date: $("aDate").value, heure: $("aHeure").value.trim(),
     prix: $("aPrix").value, acompte: $("aAcompte").value,
@@ -290,27 +288,50 @@ $("genBtn").onclick = () => {
   if (!d.projet || !d.date || d.prix === "" || d.acompte === "") return e("Remplis la description, la date, le prix et l'acompte.");
   if (parseFloat(d.acompte) > parseFloat(d.prix)) return e("L'acompte ne peut pas dépasser le prix.");
   if (d.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) return e("E-mail du client invalide.");
-  e("");
-  const link = location.origin + location.pathname + "?r=" + encodeRdv(d);
-  $("aLink").value = link;
-  const quand = fmtDate(d.date) + (d.heure ? " à " + d.heure : "");
-  $("sendRecap").innerHTML = `<strong>${escapeHtml(d.projet)}</strong> — ${quand} — ${d.prix} € (acompte ${d.acompte} €)` + (d.prenom ? `<br>Client : ${escapeHtml(d.prenom)}` : "") + (d.email ? `<br>E-mail : ${escapeHtml(d.email)}` : "");
-  shareText = `Bonjour${d.prenom ? " " + d.prenom : ""} ! Voici le contrat pour ton rendez-vous tatouage du ${quand} avec elxne.ttt. Merci de le remplir et de le signer ici pour confirmer la réservation :\n${link}`;
-  const subject = `Contrat de réservation — tatouage du ${fmtDate(d.date)} — elxne.ttt`;
-  $("mailBtn").href = `mailto:${encodeURIComponent(d.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(shareText)}`;
-  $("mailBtn").classList.toggle("hidden", !d.email);
-  $("shareBtn").classList.toggle("hidden", !navigator.share);
-  $("sendCard").classList.remove("hidden");
-  $("sendCard").scrollIntoView({behavior:"smooth"});
+  e(""); $("genBtn").disabled = true; $("genBtn").textContent = "Préparation…";
+  try {
+    const r = encodeRdv(d);
+    const res = await api({ action: "prepare", code: artistCode, r });
+    if (!res.ok) throw new Error(res.error || "refus");
+    const link = location.origin + location.pathname + "?r=" + r + "&s=" + res.sig;
+    const quand = fmtDate(d.date) + (d.heure ? " à " + d.heure : "");
+    const text = `Bonjour${d.prenom ? " " + d.prenom : ""} !\n\nVoici le contrat pour ton rendez-vous tatouage du ${quand} avec elxne.ttt.\nMerci de le remplir et de le signer ici pour confirmer la réservation :\n${link}\n\nÀ bientôt,\nelxne.ttt`;
+    const subject = `Contrat de réservation — tatouage du ${fmtDate(d.date)} — elxne.ttt`;
+    current = { d, link, text, subject };
+    $("aLink").value = link;
+    $("sendRecap").innerHTML = `<strong>${escapeHtml(d.projet)}</strong> — ${quand} — ${d.prix} € (acompte ${d.acompte} €)` + (d.prenom ? `<br>Client : ${escapeHtml(d.prenom)}` : "") + (d.email ? `<br>E-mail : ${escapeHtml(d.email)}` : "");
+    $("mailBtn").classList.toggle("hidden", !d.email);
+    $("mailBtn").disabled = false; $("mailBtn").textContent = "✉️ Envoyer au client par e-mail";
+    $("mailStatus").textContent = "";
+    $("shareBtn").classList.toggle("hidden", !navigator.share);
+    $("sendCard").classList.remove("hidden");
+    $("sendCard").scrollIntoView({behavior:"smooth"});
+  } catch(x){ e("Impossible de préparer le contrat : " + x.message); }
+  $("genBtn").disabled = false; $("genBtn").textContent = "Préparer le contrat";
 };
-$("shareBtn").onclick = () => navigator.share({ title: "Contrat elxne.ttt", text: shareText }).catch(()=>{});
+$("mailBtn").onclick = async () => {
+  if (!current) return;
+  $("mailBtn").disabled = true; $("mailBtn").textContent = "Envoi…"; $("mailStatus").textContent = "";
+  try {
+    const res = await api({ action: "sendLink", code: artistCode, to: current.d.email, subject: current.subject, text: current.text });
+    if (!res.ok) throw new Error(res.error || "refus");
+    $("mailBtn").textContent = "E-mail envoyé ✓";
+    $("mailStatus").textContent = `Envoyé à ${current.d.email} depuis ton Gmail.`;
+  } catch(x){
+    $("mailBtn").disabled = false; $("mailBtn").textContent = "✉️ Réessayer l'envoi";
+    $("mailStatus").textContent = "L'envoi a échoué (" + x.message + "). Tu peux copier le lien ou le partager à la place.";
+  }
+};
+$("shareBtn").onclick = () => navigator.share({ title: "Contrat elxne.ttt", text: current ? current.text : "" }).catch(()=>{});
 $("copyBtn").onclick = async () => {
-  try { await navigator.clipboard.writeText($("aLink").value); $("copyBtn").textContent = "Lien copié ✓"; }
-  catch(e){ $("aLink").select(); document.execCommand("copy"); $("copyBtn").textContent = "Lien copié ✓"; }
+  try { await navigator.clipboard.writeText($("aLink").value); }
+  catch(e){ $("aLink").select(); document.execCommand("copy"); }
+  $("copyBtn").textContent = "Lien copié ✓";
   setTimeout(() => $("copyBtn").textContent = "Copier le lien", 2000);
 };
 $("newBtn").onclick = () => {
   ["aProjet","aDate","aHeure","aPrix","aAcompte","aPrenom","aEmail"].forEach(id => $(id).value = "");
+  current = null;
   $("sendCard").classList.add("hidden"); window.scrollTo({top:0,behavior:"smooth"});
 };
 
@@ -403,27 +424,25 @@ $("form").addEventListener("submit", async e => {
   // Copie téléchargée côté client
   downloadPdf();
 
-  // Envoi par e-mail via FormSubmit (pièce jointe + copie au client)
+  // Envoi par e-mail via le script Google (à la tatoueuse + copie au client)
   try {
-    const f = $("mailForm");
-    f.action = "https://formsubmit.co/" + encodeURIComponent(CONFIG.emailTatoueuse);
-    $("mSubject").value = `Contrat signé — ${clientName} — RDV ${fmtDate($("dateRdv").value)}`;
-    $("mCc").value = $("email").value.trim();
-    $("mClient").value = clientName;
-    $("mRef").value = (RDV && RDV.prenom) ? RDV.prenom : "—";
-    $("mEmail").value = $("email").value.trim();
-    $("mTel").value = $("tel").value.trim();
-    $("mRdv").value = fmtDate($("dateRdv").value) + ($("heureRdv").value ? " à " + $("heureRdv").value : "");
-    $("mPrix").value = $("prix").value + " €";
-    $("mAcompte").value = $("acompte").value + " € (acompte non remboursable sauf force majeure)";
-    $("mDate").value = signedAt.toLocaleString("fr-FR");
-    const dt = new DataTransfer();
-    dt.items.add(new File([pdfBlob], pdfName, {type:"application/pdf"}));
-    $("mFile").files = dt.files;
-    f.submit();
-    $("doneMsg").innerHTML = `Merci ${escapeHtml($("prenom").value.trim())} ! Le contrat signé a été envoyé à elxne.ttt, et une copie part à <strong>${escapeHtml($("email").value.trim())}</strong>. Une copie PDF a aussi été téléchargée sur votre appareil.`;
+    const pdfB64 = await new Promise((ok, ko) => {
+      const fr = new FileReader();
+      fr.onload = () => ok(String(fr.result).split(",")[1]); fr.onerror = ko;
+      fr.readAsDataURL(pdfBlob);
+    });
+    const res = await api({
+      action: "contract", r: rdvParam, s: sigParam, pdf: pdfB64, filename: pdfName,
+      client: clientName, ref: (RDV && RDV.prenom) ? RDV.prenom : "",
+      clientEmail: $("email").value.trim(), tel: $("tel").value.trim(),
+      rdv: fmtDate($("dateRdv").value) + ($("heureRdv").value ? " à " + $("heureRdv").value : ""),
+      projet: $("projet").value.trim(), prix: $("prix").value, acompte: $("acompte").value,
+      signedAt: signedAt.toLocaleString("fr-FR"),
+    });
+    if (!res.ok) throw new Error(res.error || "refus");
+    $("doneMsg").innerHTML = `Merci ${escapeHtml($("prenom").value.trim())} ! Le contrat signé a été envoyé à elxne.ttt, et une copie vous a été envoyée à <strong>${escapeHtml($("email").value.trim())}</strong>. Une copie PDF a aussi été téléchargée sur votre appareil.`;
   } catch (x) {
-    $("doneMsg").textContent = "Le contrat est signé et téléchargé, mais l'envoi automatique a échoué : merci d'envoyer le PDF à elxne.ttt par message.";
+    $("doneMsg").textContent = "Le contrat est signé et téléchargé sur votre appareil, mais l'envoi automatique a échoué : merci d'envoyer le PDF à elxne.ttt par message.";
   }
   $("form").classList.add("hidden");
   $("doneCard").classList.remove("hidden");
