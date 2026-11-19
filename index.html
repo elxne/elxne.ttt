@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>elxne.ttt — Contrat de réservation & acompte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* ====================================================================
+   RÉGLAGES — à modifier une seule fois par la tatoueuse
+   (voir aussi le bloc CONFIG dans le script plus bas)
+   ==================================================================== */
+:root{
+  --ink:#141210; --paper:#f6f1e9; --card:#fffdf9; --muted:#6f675d;
+  --line:#e3dbcf; --accent:#8c2f2b; --ok:#2f6b3a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:16px;line-height:1.55}
+.wrap{max-width:760px;margin:0 auto;padding:32px 18px 64px}
+header{text-align:center;padding:28px 0 22px;border-bottom:1px solid var(--line);margin-bottom:28px}
+.brand{font-family:"Cormorant Garamond",serif;font-size:46px;font-weight:600;letter-spacing:.02em;margin:0;line-height:1}
+.brand span{color:var(--accent)}
+.subtitle{margin:10px 0 0;color:var(--muted);font-size:14px;letter-spacing:.14em;text-transform:uppercase}
+h2{font-family:"Cormorant Garamond",serif;font-size:27px;font-weight:600;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px;margin-bottom:22px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.full{grid-column:1/-1}
+label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500}
+input[type=text],input[type=email],input[type=tel],input[type=date],input[type=number],textarea{
+  font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);width:100%}
+input:focus,textarea:focus{outline:2px solid var(--ink);outline-offset:1px}
+textarea{min-height:80px;resize:vertical}
+.summary{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
+.pill{flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff}
+.pill small{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+.pill strong{font-size:20px}
+.contract{font-size:14.5px}
+.contract h3{font-size:15px;margin:18px 0 6px}
+.contract p{margin:0 0 8px}
+.contract .hl{background:#f6e7e3;border-left:3px solid var(--accent);padding:10px 12px;border-radius:0 8px 8px 0}
+.checks label{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line);font-size:14.5px;cursor:pointer}
+.checks label:last-child{border-bottom:none}
+.checks input{width:20px;height:20px;margin-top:2px;flex:none;accent-color:var(--ink)}
+.sigbox{border:1.5px dashed #b9ae9f;border-radius:12px;background:#fff;position:relative;touch-action:none}
+canvas{display:block;width:100%;height:190px;border-radius:12px;cursor:crosshair}
+.sighint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#b9ae9f;pointer-events:none;font-size:15px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+button{font:inherit;font-weight:600;border-radius:10px;padding:12px 18px;cursor:pointer;border:1px solid var(--ink);background:#fff;color:var(--ink)}
+button.primary{background:var(--ink);color:#fff;padding:15px 22px;font-size:16px;width:100%}
+button:disabled{opacity:.45;cursor:not-allowed}
+.err{color:var(--accent);font-size:14px;margin-top:10px;min-height:1em}
+.done{text-align:center}
+.done .big{font-family:"Cormorant Garamond",serif;font-size:34px;margin:0 0 6px;color:var(--ok)}
+.foot{text-align:center;color:var(--muted);font-size:12.5px;margin-top:26px}
+.hidden{display:none !important}
+a.btn{font-weight:600;border-radius:10px;padding:12px 18px;border:1px solid var(--ink);background:var(--ink);color:#fff;text-decoration:none;display:inline-block}
+input[readonly],textarea[readonly]{background:#f3eee6;color:var(--ink);border-color:transparent}
+.lockedNote{font-size:13px;color:var(--muted);margin:0 0 12px}
+@media (max-width:600px){.grid{grid-template-columns:1fr}.brand{font-size:38px}.card{padding:18px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="brand">elxne<span>.</span>ttt</p>
+    <p class="subtitle">Contrat de réservation &amp; acompte</p>
+  </header>
+
+  <!-- ============ ESPACE TATOUEUSE ============ -->
+  <section class="card hidden" id="lockCard">
+    <h2>Espace tatoueuse</h2>
+    <p style="margin:0 0 12px;color:var(--muted);font-size:14px">Entre ton code pour préparer un contrat. (Client ? Utilise le lien reçu par message ou par e-mail.)</p>
+    <div class="row" style="margin-top:0">
+      <input type="password" id="pin" inputmode="numeric" placeholder="Code" style="flex:1;min-width:140px">
+      <button type="button" id="pinBtn">Entrer</button>
+    </div>
+    <div class="err" id="pinErr"></div>
+  </section>
+
+  <section class="hidden" id="artistPanel">
+    <div class="card">
+      <h2>Nouveau rendez-vous</h2>
+      <div class="grid">
+        <label class="f full">Description du tatouage
+          <textarea id="aProjet" placeholder="Motif, emplacement, taille approximative…"></textarea>
+        </label>
+        <label class="f">Date du rendez-vous <input type="date" id="aDate"></label>
+        <label class="f">Heure <input type="text" id="aHeure" placeholder="ex. 14h00"></label>
+        <label class="f">Prix total (€) <input type="number" id="aPrix" min="0" step="1"></label>
+        <label class="f">Acompte (€) <input type="number" id="aAcompte" min="0" step="1"></label>
+        <label class="f">Prénom / Instagram du client (facultatif) <input type="text" id="aPrenom" placeholder="ex. Léa ou @lea.ink"></label>
+        <label class="f">E-mail du client <input type="email" id="aEmail"></label>
+      </div>
+      <button type="button" class="primary" id="genBtn" style="margin-top:18px">Préparer le contrat</button>
+      <div class="err" id="aErr"></div>
+    </div>
+
+    <div class="card hidden" id="sendCard">
+      <h2>Envoyer au client</h2>
+      <p style="margin:0 0 10px;font-size:14px" id="sendRecap"></p>
+      <label class="f">Lien du contrat prérempli
+        <input type="text" id="aLink" readonly onclick="this.select()">
+      </label>
+      <div class="row">
+        <a class="btn" id="mailBtn" href="#">✉️ Envoyer par e-mail</a>
+        <button type="button" id="shareBtn">📲 Partager (WhatsApp, Insta…)</button>
+        <button type="button" id="copyBtn">Copier le lien</button>
+      </div>
+      <p style="margin:12px 0 0;color:var(--muted);font-size:13px">Tu recevras le contrat signé (PDF) sur ton adresse dès que le client l'aura signé. Vérifie toujours les montants dans le PDF reçu.</p>
+      <button type="button" id="newBtn" style="margin-top:14px">+ Nouveau contrat</button>
+    </div>
+  </section>
+
+  <form id="form" class="hidden" novalidate>
+    <!-- 1. Le rendez-vous -->
+    <section class="card">
+      <h2>1. Le rendez-vous</h2>
+      <p class="lockedNote">Ces informations ont été remplies par elxne.ttt. Si quelque chose est faux, ne signez pas et contactez-la.</p>
+      <div class="grid">
+        <label class="f full">Description du tatouage
+          <textarea id="projet" required placeholder="Motif, emplacement, taille approximative…"></textarea>
+        </label>
+        <label class="f">Date du rendez-vous
+          <input type="date" id="dateRdv" required>
+        </label>
+        <label class="f">Heure
+          <input type="text" id="heureRdv" placeholder="ex. 14h00">
+        </label>
+        <label class="f">Prix total convenu (€)
+          <input type="number" id="prix" min="0" step="1" required>
+        </label>
+        <label class="f">Acompte versé (€)
+          <input type="number" id="acompte" min="0" step="1" required>
+        </label>
+      </div>
+      <div class="summary">
+        <div class="pill"><small>Prix total</small><strong id="sPrix">—</strong></div>
+        <div class="pill"><small>Acompte</small><strong id="sAcompte">—</strong></div>
+        <div class="pill"><small>Reste à payer le jour J</small><strong id="sReste">—</strong></div>
+      </div>
+    </section>
+
+    <!-- 2. Le client -->
+    <section class="card">
+      <h2>2. Vos informations</h2>
+      <div class="grid">
+        <label class="f">Prénom <input type="text" id="prenom" required autocomplete="given-name"></label>
+        <label class="f">Nom <input type="text" id="nom" required autocomplete="family-name"></label>
+        <label class="f">Date de naissance <input type="date" id="naissance" required></label>
+        <label class="f">Téléphone <input type="tel" id="tel" required autocomplete="tel"></label>
+        <label class="f full">E-mail (vous recevrez une copie du contrat signé)
+          <input type="email" id="email" required autocomplete="email">
+        </label>
+      </div>
+    </section>
+
+    <!-- 3. Le contrat -->
+    <section class="card contract">
+      <h2>3. Conditions du contrat</h2>
+      <div id="contractText"></div>
+    </section>
+
+    <!-- 4. Consentements -->
+    <section class="card checks">
+      <h2>4. Je confirme</h2>
+      <div id="checks"></div>
+    </section>
+
+    <!-- 5. Signature -->
+    <section class="card">
+      <h2>5. Signature</h2>
+      <p style="margin:0 0 12px;color:var(--muted);font-size:14px">Signez avec le doigt ou la souris dans le cadre ci-dessous.</p>
+      <div class="sigbox">
+        <canvas id="sig"></canvas>
+        <div class="sighint" id="sigHint">Signez ici</div>
+      </div>
+      <div class="row">
+        <button type="button" id="clearSig">Effacer la signature</button>
+        <span style="color:var(--muted);font-size:13px" id="signedAt"></span>
+      </div>
+    </section>
+
+    <button type="submit" class="primary" id="submitBtn">Signer et envoyer le contrat</button>
+    <div class="err" id="err" role="alert"></div>
+  </form>
+
+  <!-- Écran final -->
+  <section class="card done hidden" id="doneCard">
+    <p class="big">Contrat signé ✓</p>
+    <p id="doneMsg">Envoi en cours…</p>
+    <div class="row" style="justify-content:center">
+      <button type="button" id="dlAgain">Télécharger ma copie (PDF)</button>
+    </div>
+  </section>
+
+  <p class="foot">elxne.ttt — Instagram @elxne.ttt</p>
+</div>
+
+<!-- Formulaire technique d'envoi par e-mail (invisible) -->
+<form id="mailForm" class="hidden" method="POST" enctype="multipart/form-data" target="mailFrame">
+  <input type="hidden" name="_subject" id="mSubject">
+  <input type="hidden" name="_cc" id="mCc">
+  <input type="hidden" name="_captcha" value="false">
+  <input type="hidden" name="_template" value="table">
+  <input type="hidden" name="Client" id="mClient">
+  <input type="hidden" name="Réf. client (prénom / Insta)" id="mRef">
+  <input type="hidden" name="Email client" id="mEmail">
+  <input type="hidden" name="Téléphone" id="mTel">
+  <input type="hidden" name="Rendez-vous" id="mRdv">
+  <input type="hidden" name="Prix total" id="mPrix">
+  <input type="hidden" name="Acompte" id="mAcompte">
+  <input type="hidden" name="Signé le" id="mDate">
+  <input type="file" name="attachment" id="mFile">
+</form>
+<iframe name="mailFrame" id="mailFrame" class="hidden" title="envoi"></iframe>
+
+<script>
+/* ====================================================================
+   CONFIG — À REMPLIR PAR LA TATOUEUSE
+   ==================================================================== */
+const CONFIG = {
+  // Adresse qui reçoit les contrats signés (via FormSubmit.co, gratuit)
+  emailTatoueuse: "TON-EMAIL@exemple.com",
+  // Identité légale qui apparaît dans le contrat
+  nomLegal: "[Prénom Nom de la tatoueuse]",
+  siret: "[SIRET]",
+  adresseSalon: "[Adresse du salon]",
+  instagram: "@elxne.ttt",
+  // Code pour accéder à l'espace tatoueuse (où l'on prépare les contrats)
+  codeAcces: "1234",
+};
+
+const $ = id => document.getElementById(id);
+
+/* ---------- Encodage des infos du RDV dans le lien ---------- */
+function encodeRdv(o){
+  const bytes = new TextEncoder().encode(JSON.stringify(o));
+  let bin = ""; bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function decodeRdv(s){
+  try {
+    s = s.replace(/-/g,"+").replace(/_/g,"/"); while (s.length % 4) s += "=";
+    const bin = atob(s), bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch(e){ return null; }
+}
+
+const rdvParam = new URLSearchParams(location.search).get("r");
+const RDV = rdvParam ? decodeRdv(rdvParam) : null;
+
+if (RDV) {
+  /* ===== MODE CLIENT : contrat prérempli, champs du RDV verrouillés ===== */
+  $("projet").value = RDV.projet || "";
+  $("dateRdv").value = RDV.date || "";
+  $("heureRdv").value = RDV.heure || "";
+  $("prix").value = RDV.prix ?? "";
+  $("acompte").value = RDV.acompte ?? "";
+  if (RDV.email) $("email").value = RDV.email;
+  ["projet","dateRdv","heureRdv","prix","acompte"].forEach(id => $(id).readOnly = true);
+  $("form").classList.remove("hidden");
+} else if (rdvParam) {
+  document.querySelector(".wrap").insertAdjacentHTML("beforeend",
+    '<div class="card"><h2>Lien invalide</h2><p>Ce lien de contrat est incomplet ou abîmé. Demandez un nouveau lien à elxne.ttt.</p></div>');
+} else {
+  /* ===== MODE TATOUEUSE ===== */
+  $("lockCard").classList.remove("hidden");
+}
+
+function unlock(){
+  if ($("pin").value === CONFIG.codeAcces) {
+    $("lockCard").classList.add("hidden");
+    $("artistPanel").classList.remove("hidden");
+    $("aProjet").focus();
+  } else { $("pinErr").textContent = "Code incorrect."; }
+}
+$("pinBtn").onclick = unlock;
+$("pin").addEventListener("keydown", e => { if (e.key === "Enter") unlock(); });
+
+let shareText = "";
+$("genBtn").onclick = () => {
+  const d = {
+    projet: $("aProjet").value.trim(), date: $("aDate").value, heure: $("aHeure").value.trim(),
+    prix: $("aPrix").value, acompte: $("aAcompte").value,
+    prenom: $("aPrenom").value.trim(), email: $("aEmail").value.trim(),
+  };
+  const e = m => { $("aErr").textContent = m; };
+  if (!d.projet || !d.date || d.prix === "" || d.acompte === "") return e("Remplis la description, la date, le prix et l'acompte.");
+  if (parseFloat(d.acompte) > parseFloat(d.prix)) return e("L'acompte ne peut pas dépasser le prix.");
+  if (d.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) return e("E-mail du client invalide.");
+  e("");
+  const link = location.origin + location.pathname + "?r=" + encodeRdv(d);
+  $("aLink").value = link;
+  const quand = fmtDate(d.date) + (d.heure ? " à " + d.heure : "");
+  $("sendRecap").innerHTML = `<strong>${escapeHtml(d.projet)}</strong> — ${quand} — ${d.prix} € (acompte ${d.acompte} €)` + (d.prenom ? `<br>Client : ${escapeHtml(d.prenom)}` : "") + (d.email ? `<br>E-mail : ${escapeHtml(d.email)}` : "");
+  shareText = `Bonjour${d.prenom ? " " + d.prenom : ""} ! Voici le contrat pour ton rendez-vous tatouage du ${quand} avec elxne.ttt. Merci de le remplir et de le signer ici pour confirmer la réservation :\n${link}`;
+  const subject = `Contrat de réservation — tatouage du ${fmtDate(d.date)} — elxne.ttt`;
+  $("mailBtn").href = `mailto:${encodeURIComponent(d.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(shareText)}`;
+  $("mailBtn").classList.toggle("hidden", !d.email);
+  $("shareBtn").classList.toggle("hidden", !navigator.share);
+  $("sendCard").classList.remove("hidden");
+  $("sendCard").scrollIntoView({behavior:"smooth"});
+};
+$("shareBtn").onclick = () => navigator.share({ title: "Contrat elxne.ttt", text: shareText }).catch(()=>{});
+$("copyBtn").onclick = async () => {
+  try { await navigator.clipboard.writeText($("aLink").value); $("copyBtn").textContent = "Lien copié ✓"; }
+  catch(e){ $("aLink").select(); document.execCommand("copy"); $("copyBtn").textContent = "Lien copié ✓"; }
+  setTimeout(() => $("copyBtn").textContent = "Copier le lien", 2000);
+};
+$("newBtn").onclick = () => {
+  ["aProjet","aDate","aHeure","aPrix","aAcompte","aPrenom","aEmail"].forEach(id => $(id).value = "");
+  $("sendCard").classList.add("hidden"); window.scrollTo({top:0,behavior:"smooth"});
+};
+
+const eur = v => (v === "" || isNaN(v)) ? "—" : Number(v).toLocaleString("fr-FR") + " €";
+function updateSummary(){
+  const p = parseFloat($("prix").value), a = parseFloat($("acompte").value);
+  $("sPrix").textContent = eur(p);
+  $("sAcompte").textContent = eur(a);
+  $("sReste").textContent = (!isNaN(p) && !isNaN(a)) ? eur(p - a) : "—";
+  renderContract();
+}
+["prix","acompte","dateRdv","heureRdv","prenom","nom"].forEach(id => $(id).addEventListener("input", updateSummary));
+
+/* ---------------- Texte du contrat ---------------- */
+function fmtDate(d){ if(!d) return "[date]"; const [y,m,j]=d.split("-"); return `${j}/${m}/${y}`; }
+function articles(){
+  const a = $("acompte").value || "[montant]", p = $("prix").value || "[prix]";
+  const client = (($("prenom").value||"") + " " + ($("nom").value||"")).trim() || "[le client]";
+  const rdv = fmtDate($("dateRdv").value) + ($("heureRdv").value ? " à " + $("heureRdv").value : "");
+  return [
+    ["Parties", `Le présent contrat est conclu entre ${CONFIG.nomLegal}, tatoueuse exerçant sous le nom « elxne.ttt » (SIRET ${CONFIG.siret}, ${CONFIG.adresseSalon}), ci-après « la tatoueuse », et ${client}, ci-après « le client ».`],
+    ["Objet", `Réalisation du tatouage décrit ci-dessus, le ${rdv}, pour un prix total convenu de ${p} €.`],
+    ["Nature de la somme versée : un ACOMPTE", `Le client verse la somme de ${a} € à titre d'ACOMPTE, et non d'arrhes. Cet acompte vaut engagement ferme et définitif des deux parties. Il sert notamment à bloquer la date du rendez-vous et à financer l'achat du matériel nécessaire à la réalisation du tatouage. Il sera déduit du prix total le jour du rendez-vous.`, true],
+    ["Annulation par le client", `En cas d'annulation, d'absence ou de retard important du client, quelle qu'en soit la raison, l'acompte reste définitivement acquis à la tatoueuse et ne sera pas remboursé. Le seul cas de remboursement est la force majeure au sens de l'article 1218 du Code civil, c'est-à-dire un événement échappant au contrôle du client, imprévisible et irrésistible, qui l'empêche réellement de se présenter (par exemple une hospitalisation), sur présentation d'un justificatif. Les difficultés personnelles, financières, administratives ou d'organisation ne constituent pas un cas de force majeure.`, true],
+    ["Report du rendez-vous", `Un éventuel report de date reste à la seule appréciation de la tatoueuse et ne constitue pas un droit pour le client.`],
+    ["Annulation par la tatoueuse", `Si la tatoueuse annule le rendez-vous de son fait, sans proposer de nouvelle date acceptée par le client, l'acompte est intégralement remboursé au client.`],
+    ["Exécution immédiate (contrat conclu à distance)", `Le client demande expressément que l'exécution du contrat (réservation du créneau et commande du matériel) commence dès la signature, avant la fin du délai de rétractation de 14 jours prévu par l'article L221-18 du Code de la consommation. Conformément à l'article L221-25 de ce même code, s'il exerçait néanmoins son droit de rétractation, il resterait redevable d'un montant correspondant au service déjà fourni, notamment le matériel commandé et la réservation du créneau.`],
+    ["Conditions du tatouage", `Le client certifie être majeur, ne pas être sous l'emprise d'alcool ou de stupéfiants le jour du rendez-vous et avoir informé la tatoueuse de toute contre-indication médicale (allergies, traitement, grossesse, etc.).`],
+    ["Signature électronique", `Le client reconnaît que la signature apposée sur cette page a la même valeur qu'une signature manuscrite (article 1367 du Code civil). Une copie du contrat signé est transmise par e-mail aux deux parties.`],
+  ];
+}
+function renderContract(){
+  $("contractText").innerHTML = articles().map((art,i) =>
+    `<h3>Article ${i+1} — ${art[0]}</h3><p${art[2]?' class="hl"':''}>${escapeHtml(art[1])}</p>`).join("");
+}
+function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+/* ---------------- Cases à cocher ---------------- */
+const CHECKS = [
+  "J'ai lu l'intégralité du contrat ci-dessus et je l'accepte.",
+  "Je comprends que la somme versée est un ACOMPTE et qu'elle ne me sera PAS remboursée si j'annule, sauf en cas de force majeure réelle et justifiée.",
+  "Je comprends que des problèmes personnels, financiers ou d'organisation ne sont pas des cas de force majeure.",
+  "Je demande que la réservation et la commande du matériel commencent dès maintenant.",
+  "Je certifie être majeur(e) et que les informations fournies sont exactes.",
+];
+$("checks").innerHTML = CHECKS.map((t,i)=>`<label><input type="checkbox" id="c${i}"><span>${t}</span></label>`).join("");
+
+/* ---------------- Signature ---------------- */
+const cv = $("sig"), ctx = cv.getContext("2d");
+let drawing = false, hasSig = false, last = null;
+function sizeCanvas(){
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  const old = hasSig ? cv.toDataURL() : null;
+  cv.width = r.width * dpr; cv.height = r.height * dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.lineWidth = 2.4; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#141210";
+  if (old){ const img = new Image(); img.onload = () => ctx.drawImage(img,0,0,r.width,r.height); img.src = old; }
+}
+function pos(e){ const r = cv.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+cv.addEventListener("pointerdown", e => { drawing = true; last = pos(e); cv.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.arc(last.x,last.y,1.1,0,Math.PI*2); ctx.fillStyle="#141210"; ctx.fill(); mark(); });
+cv.addEventListener("pointermove", e => { if(!drawing) return; const p = pos(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last = p; });
+["pointerup","pointercancel","pointerleave"].forEach(ev => cv.addEventListener(ev, () => drawing = false));
+function mark(){ hasSig = true; $("sigHint").classList.add("hidden"); }
+$("clearSig").onclick = () => { ctx.clearRect(0,0,cv.width,cv.height); hasSig = false; $("sigHint").classList.remove("hidden"); };
+window.addEventListener("resize", sizeCanvas);
+
+/* ---------------- Validation & envoi ---------------- */
+let pdfBlob = null, pdfName = "";
+function age(d){ const b = new Date(d), n = new Date(); let a = n.getFullYear()-b.getFullYear(); const m = n.getMonth()-b.getMonth(); if (m<0 || (m===0 && n.getDate()<b.getDate())) a--; return a; }
+
+$("form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const err = msg => { $("err").textContent = msg; return false; };
+  $("err").textContent = "";
+  const req = ["projet","dateRdv","prix","acompte","prenom","nom","naissance","tel","email"];
+  for (const id of req) if (!$(id).value.trim()) { $(id).focus(); return err("Merci de remplir tous les champs obligatoires."); }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($("email").value)) { $("email").focus(); return err("Adresse e-mail invalide."); }
+  if (parseFloat($("acompte").value) > parseFloat($("prix").value)) return err("L'acompte ne peut pas dépasser le prix total.");
+  if (age($("naissance").value) < 18) return err("Le client doit être majeur pour signer ce contrat.");
+  for (let i=0;i<CHECKS.length;i++) if (!$("c"+i).checked) return err("Merci de cocher toutes les confirmations.");
+  if (!hasSig) return err("Merci de signer dans le cadre prévu.");
+  if (!window.jspdf) return err("Impossible de générer le PDF (connexion ?). Rechargez la page.");
+
+  $("submitBtn").disabled = true; $("submitBtn").textContent = "Envoi…";
+  const signedAt = new Date();
+  pdfBlob = buildPdf(signedAt);
+  const clientName = `${$("prenom").value.trim()} ${$("nom").value.trim()}`;
+  pdfName = `contrat-elxne-${$("nom").value.trim().toLowerCase().replace(/[^a-z0-9]+/gi,"-")}-${$("dateRdv").value}.pdf`;
+
+  // Copie téléchargée côté client
+  downloadPdf();
+
+  // Envoi par e-mail via FormSubmit (pièce jointe + copie au client)
+  try {
+    const f = $("mailForm");
+    f.action = "https://formsubmit.co/" + encodeURIComponent(CONFIG.emailTatoueuse);
+    $("mSubject").value = `Contrat signé — ${clientName} — RDV ${fmtDate($("dateRdv").value)}`;
+    $("mCc").value = $("email").value.trim();
+    $("mClient").value = clientName;
+    $("mRef").value = (RDV && RDV.prenom) ? RDV.prenom : "—";
+    $("mEmail").value = $("email").value.trim();
+    $("mTel").value = $("tel").value.trim();
+    $("mRdv").value = fmtDate($("dateRdv").value) + ($("heureRdv").value ? " à " + $("heureRdv").value : "");
+    $("mPrix").value = $("prix").value + " €";
+    $("mAcompte").value = $("acompte").value + " € (acompte non remboursable sauf force majeure)";
+    $("mDate").value = signedAt.toLocaleString("fr-FR");
+    const dt = new DataTransfer();
+    dt.items.add(new File([pdfBlob], pdfName, {type:"application/pdf"}));
+    $("mFile").files = dt.files;
+    f.submit();
+    $("doneMsg").innerHTML = `Merci ${escapeHtml($("prenom").value.trim())} ! Le contrat signé a été envoyé à elxne.ttt, et une copie part à <strong>${escapeHtml($("email").value.trim())}</strong>. Une copie PDF a aussi été téléchargée sur votre appareil.`;
+  } catch (x) {
+    $("doneMsg").textContent = "Le contrat est signé et téléchargé, mais l'envoi automatique a échoué : merci d'envoyer le PDF à elxne.ttt par message.";
+  }
+  $("form").classList.add("hidden");
+  $("doneCard").classList.remove("hidden");
+  window.scrollTo({top:0,behavior:"smooth"});
+});
+
+function downloadPdf(){
+  const url = URL.createObjectURL(pdfBlob);
+  const a = document.createElement("a"); a.href = url; a.download = pdfName;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+$("dlAgain").onclick = downloadPdf;
+
+/* ---------------- Génération du PDF ---------------- */
+function buildPdf(signedAt){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:"mm", format:"a4"});
+  const W = 210, M = 18, maxW = W - 2*M; let y = 20;
+  const need = h => { if (y + h > 282) { doc.addPage(); y = 20; } };
+  const para = (txt, size=10, style="normal", gap=1.5) => {
+    doc.setFont("helvetica", style); doc.setFontSize(size);
+    const lines = doc.splitTextToSize(txt, maxW);
+    lines.forEach(l => { need(size*0.45); doc.text(l, M, y); y += size*0.45; });
+    y += gap;
+  };
+  doc.setFont("times","bold"); doc.setFontSize(24); doc.text("elxne.ttt", W/2, y, {align:"center"}); y += 7;
+  doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(110);
+  doc.text("CONTRAT DE RÉSERVATION & ACOMPTE", W/2, y, {align:"center"}); y += 9; doc.setTextColor(0);
+  doc.setDrawColor(200); doc.line(M, y, W-M, y); y += 7;
+
+  para("CLIENT", 9, "bold", 0.5);
+  para(`${$("prenom").value.trim()} ${$("nom").value.trim()} — né(e) le ${fmtDate($("naissance").value)}\nTél. ${$("tel").value.trim()} — ${$("email").value.trim()}`, 10, "normal", 3);
+  para("RENDEZ-VOUS", 9, "bold", 0.5);
+  const p = parseFloat($("prix").value), a = parseFloat($("acompte").value);
+  para(`Tatouage : ${$("projet").value.trim()}\nDate : ${fmtDate($("dateRdv").value)}${$("heureRdv").value ? " à " + $("heureRdv").value : ""}\nPrix total : ${p} €   |   Acompte versé : ${a} €   |   Reste à payer : ${p - a} €`, 10, "normal", 4);
+
+  articles().forEach((art,i) => {
+    need(12);
+    para(`Article ${i+1} — ${art[0]}`, 10.5, "bold", 0.8);
+    para(art[1], 9.5, "normal", 2.5);
+  });
+
+  need(10);
+  para("Le client a coché les confirmations suivantes :", 10.5, "bold", 1);
+  CHECKS.forEach(c => para("[x] " + c, 9.5, "normal", 1));
+  y += 3;
+
+  need(55);
+  para(`Signé électroniquement le ${signedAt.toLocaleDateString("fr-FR")} à ${signedAt.toLocaleTimeString("fr-FR")}`, 10, "bold", 2);
+  const sigImg = cv.toDataURL("image/png");
+  const ratio = cv.height / cv.width, sw = 80;
+  doc.addImage(sigImg, "PNG", M, y, sw, sw*ratio); y += sw*ratio + 3;
+  doc.setFontSize(8); doc.setTextColor(120);
+  doc.text(`Signature de ${$("prenom").value.trim()} ${$("nom").value.trim()}`, M, y); y += 4;
+  doc.text(`Appareil : ${navigator.userAgent.slice(0,140)}`, M, y);
+  return doc.output("blob");
+}
+
+sizeCanvas(); updateSummary();
+</script>
+</body>
+</html>
