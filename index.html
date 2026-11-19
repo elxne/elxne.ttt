@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta name="theme-color" content="#0e0d0c">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>elxne.ttt — Contrat de réservation & acompte</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,8 +14,9 @@
    (voir aussi le bloc CONFIG dans le script plus bas)
    ==================================================================== */
 :root{
-  --ink:#141210; --paper:#f6f1e9; --card:#fffdf9; --muted:#6f675d;
-  --line:#e3dbcf; --accent:#8c2f2b; --ok:#2f6b3a;
+  color-scheme: dark;
+  --ink:#ece6dc; --paper:#0e0d0c; --card:#181614; --field:#211e1b; --muted:#9a9186;
+  --line:#2f2a25; --accent:#d9675f; --ok:#7cc48c; --hl:#2a1918; --ro:#1d1b19; --onInk:#0e0d0c;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:16px;line-height:1.55}
@@ -29,34 +31,34 @@ h2{font-family:"Cormorant Garamond",serif;font-size:27px;font-weight:600;margin:
 .full{grid-column:1/-1}
 label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500}
 input[type=text],input[type=email],input[type=tel],input[type=date],input[type=number],textarea{
-  font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);width:100%}
+  font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--field);color:var(--ink);width:100%}
 input:focus,textarea:focus{outline:2px solid var(--ink);outline-offset:1px}
 textarea{min-height:80px;resize:vertical}
 .summary{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
-.pill{flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff}
+.pill{flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--field)}
 .pill small{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
 .pill strong{font-size:20px}
 .contract{font-size:14.5px}
 .contract h3{font-size:15px;margin:18px 0 6px}
 .contract p{margin:0 0 8px}
-.contract .hl{background:#f6e7e3;border-left:3px solid var(--accent);padding:10px 12px;border-radius:0 8px 8px 0}
+.contract .hl{background:var(--hl);border-left:3px solid var(--accent);padding:10px 12px;border-radius:0 8px 8px 0}
 .checks label{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line);font-size:14.5px;cursor:pointer}
 .checks label:last-child{border-bottom:none}
-.checks input{width:20px;height:20px;margin-top:2px;flex:none;accent-color:var(--ink)}
-.sigbox{border:1.5px dashed #b9ae9f;border-radius:12px;background:#fff;position:relative;touch-action:none}
+.checks input{width:20px;height:20px;margin-top:2px;flex:none;accent-color:var(--accent)}
+.sigbox{border:1.5px dashed #5a524a;border-radius:12px;background:#f6f1e9;position:relative;touch-action:none}
 canvas{display:block;width:100%;height:190px;border-radius:12px;cursor:crosshair}
-.sighint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#b9ae9f;pointer-events:none;font-size:15px}
+.sighint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#a39889;pointer-events:none;font-size:15px}
 .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
-button{font:inherit;font-weight:600;border-radius:10px;padding:12px 18px;cursor:pointer;border:1px solid var(--ink);background:#fff;color:var(--ink)}
-button.primary{background:var(--ink);color:#fff;padding:15px 22px;font-size:16px;width:100%}
+button{font:inherit;font-weight:600;border-radius:10px;padding:12px 18px;cursor:pointer;border:1px solid var(--line);background:var(--field);color:var(--ink)}
+button.primary{background:var(--ink);color:var(--onInk);border-color:var(--ink);padding:15px 22px;font-size:16px;width:100%}
 button:disabled{opacity:.45;cursor:not-allowed}
 .err{color:var(--accent);font-size:14px;margin-top:10px;min-height:1em}
 .done{text-align:center}
 .done .big{font-family:"Cormorant Garamond",serif;font-size:34px;margin:0 0 6px;color:var(--ok)}
 .foot{text-align:center;color:var(--muted);font-size:12.5px;margin-top:26px}
 .hidden{display:none !important}
-button.btnDark,a.btn{font-weight:600;border-radius:10px;padding:12px 18px;border:1px solid var(--ink);background:var(--ink);color:#fff;text-decoration:none;display:inline-block}
-input[readonly],textarea[readonly]{background:#f3eee6;color:var(--ink);border-color:transparent}
+button.btnDark,a.btn{font-weight:600;border-radius:10px;padding:12px 18px;border:1px solid var(--ink);background:var(--ink);color:var(--onInk);text-decoration:none;display:inline-block}
+input[readonly],textarea[readonly]{background:var(--ro);color:var(--ink);border-color:transparent}
 .lockedNote{font-size:13px;color:var(--muted);margin:0 0 12px}
 @media (max-width:600px){.grid{grid-template-columns:1fr}.brand{font-size:38px}.card{padding:18px}}
 </style>
@@ -90,8 +92,7 @@ input[readonly],textarea[readonly]{background:#f3eee6;color:var(--ink);border-co
         <label class="f">Heure <input type="text" id="aHeure" placeholder="ex. 14h00"></label>
         <label class="f">Prix total (€) <input type="number" id="aPrix" min="0" step="1"></label>
         <label class="f">Acompte (€) <input type="number" id="aAcompte" min="0" step="1"></label>
-        <label class="f">Prénom / Instagram du client (facultatif) <input type="text" id="aPrenom" placeholder="ex. Léa ou @lea.ink"></label>
-        <label class="f">E-mail du client <input type="email" id="aEmail"></label>
+        <label class="f full">Prénom / Instagram du client (facultatif) <input type="text" id="aPrenom" placeholder="ex. Léa ou @lea.ink"></label>
       </div>
       <button type="button" class="primary" id="genBtn" style="margin-top:18px">Préparer le contrat</button>
       <div class="err" id="aErr"></div>
@@ -104,11 +105,9 @@ input[readonly],textarea[readonly]{background:#f3eee6;color:var(--ink);border-co
         <input type="text" id="aLink" readonly onclick="this.select()">
       </label>
       <div class="row">
-        <button type="button" class="btnDark" id="mailBtn">✉️ Envoyer au client par e-mail</button>
-        <button type="button" id="shareBtn">📲 Partager (WhatsApp, Insta…)</button>
+        <button type="button" class="btnDark" id="shareBtn">📲 Partager (WhatsApp, Insta…)</button>
         <button type="button" id="copyBtn">Copier le lien</button>
       </div>
-      <p style="margin:10px 0 0;font-size:14px;color:var(--ok)" id="mailStatus"></p>
       <p style="margin:12px 0 0;color:var(--muted);font-size:13px">Tu recevras le contrat signé (PDF) sur ton adresse dès que le client l'aura signé. Vérifie toujours les montants dans le PDF reçu.</p>
       <button type="button" id="newBtn" style="margin-top:14px">+ Nouveau contrat</button>
     </div>
@@ -248,7 +247,6 @@ if (RDV) {
   $("heureRdv").value = RDV.heure || "";
   $("prix").value = RDV.prix ?? "";
   $("acompte").value = RDV.acompte ?? "";
-  if (RDV.email) $("email").value = RDV.email;
   ["projet","dateRdv","heureRdv","prix","acompte"].forEach(id => $(id).readOnly = true);
   $("form").classList.remove("hidden");
 } else if (rdvParam) {
@@ -282,12 +280,11 @@ $("genBtn").onclick = async () => {
   const d = {
     projet: $("aProjet").value.trim(), date: $("aDate").value, heure: $("aHeure").value.trim(),
     prix: $("aPrix").value, acompte: $("aAcompte").value,
-    prenom: $("aPrenom").value.trim(), email: $("aEmail").value.trim(),
+    prenom: $("aPrenom").value.trim(),
   };
   const e = m => { $("aErr").textContent = m; };
   if (!d.projet || !d.date || d.prix === "" || d.acompte === "") return e("Remplis la description, la date, le prix et l'acompte.");
   if (parseFloat(d.acompte) > parseFloat(d.prix)) return e("L'acompte ne peut pas dépasser le prix.");
-  if (d.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) return e("E-mail du client invalide.");
   e(""); $("genBtn").disabled = true; $("genBtn").textContent = "Préparation…";
   try {
     const r = encodeRdv(d);
@@ -299,28 +296,12 @@ $("genBtn").onclick = async () => {
     const subject = `Contrat de réservation — tatouage du ${fmtDate(d.date)} — elxne.ttt`;
     current = { d, link, text, subject };
     $("aLink").value = link;
-    $("sendRecap").innerHTML = `<strong>${escapeHtml(d.projet)}</strong> — ${quand} — ${d.prix} € (acompte ${d.acompte} €)` + (d.prenom ? `<br>Client : ${escapeHtml(d.prenom)}` : "") + (d.email ? `<br>E-mail : ${escapeHtml(d.email)}` : "");
-    $("mailBtn").classList.toggle("hidden", !d.email);
-    $("mailBtn").disabled = false; $("mailBtn").textContent = "✉️ Envoyer au client par e-mail";
-    $("mailStatus").textContent = "";
+    $("sendRecap").innerHTML = `<strong>${escapeHtml(d.projet)}</strong> — ${quand} — ${d.prix} € (acompte ${d.acompte} €)` + (d.prenom ? `<br>Client : ${escapeHtml(d.prenom)}` : "");
     $("shareBtn").classList.toggle("hidden", !navigator.share);
     $("sendCard").classList.remove("hidden");
     $("sendCard").scrollIntoView({behavior:"smooth"});
   } catch(x){ e("Impossible de préparer le contrat : " + x.message); }
   $("genBtn").disabled = false; $("genBtn").textContent = "Préparer le contrat";
-};
-$("mailBtn").onclick = async () => {
-  if (!current) return;
-  $("mailBtn").disabled = true; $("mailBtn").textContent = "Envoi…"; $("mailStatus").textContent = "";
-  try {
-    const res = await api({ action: "sendLink", code: artistCode, to: current.d.email, subject: current.subject, text: current.text });
-    if (!res.ok) throw new Error(res.error || "refus");
-    $("mailBtn").textContent = "E-mail envoyé ✓";
-    $("mailStatus").textContent = `Envoyé à ${current.d.email} depuis ton Gmail.`;
-  } catch(x){
-    $("mailBtn").disabled = false; $("mailBtn").textContent = "✉️ Réessayer l'envoi";
-    $("mailStatus").textContent = "L'envoi a échoué (" + x.message + "). Tu peux copier le lien ou le partager à la place.";
-  }
 };
 $("shareBtn").onclick = () => navigator.share({ title: "Contrat elxne.ttt", text: current ? current.text : "" }).catch(()=>{});
 $("copyBtn").onclick = async () => {
@@ -330,7 +311,7 @@ $("copyBtn").onclick = async () => {
   setTimeout(() => $("copyBtn").textContent = "Copier le lien", 2000);
 };
 $("newBtn").onclick = () => {
-  ["aProjet","aDate","aHeure","aPrix","aAcompte","aPrenom","aEmail"].forEach(id => $(id).value = "");
+  ["aProjet","aDate","aHeure","aPrix","aAcompte","aPrenom"].forEach(id => $(id).value = "");
   current = null;
   $("sendCard").classList.add("hidden"); window.scrollTo({top:0,behavior:"smooth"});
 };
